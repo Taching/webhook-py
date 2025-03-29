@@ -1,7 +1,26 @@
 {
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/app.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/webhook",
+      "dest": "api/app.py",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, X-Slack-Signature"
+      }
+    }
+  ],
   "functions": {
-    "api/notion_status_trigger.py": {
-      "runtime": "python3.10"
+    "api/app.py": {
+      "memory": 1024,
+      "maxDuration": 10
     }
   }
 }

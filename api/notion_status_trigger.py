@@ -8,9 +8,9 @@ load_dotenv()
 NOTION_API_KEY = os.getenv("NOTION_API_KEY")
 DATABASE_ID = os.getenv("DATABASE_ID")
 
-def update_status(page_id, headers, new_status):
+def update_status(page_title, headers, new_status, github):
     """Update the status of a page"""
-    url = f"https://api.notion.com/v1/pages/{page_id}"
+    url = f"https://api.notion.com/v1/pages/{page_title}"
 
     # First get the current page to get the status options
     res = requests.get(url, headers=headers)
@@ -33,6 +33,12 @@ def update_status(page_id, headers, new_status):
 
     # Get status options from database schema
     database = res.json()
+
+    # Debug: Print all available properties
+    print("\nAvailable database properties:")
+    for prop_name, prop_data in database.get('properties', {}).items():
+        print(f"- {prop_name} (type: {prop_data.get('type')})")
+
     status_config = database.get('properties', {}).get('Status', {}).get('status', {})
     status_options = status_config.get('options', [])
 
@@ -47,7 +53,7 @@ def update_status(page_id, headers, new_status):
         print(f"\nCould not find '{new_status}' status option. Please use one of the available options above.")
         return False
 
-    # Update the page with the new status
+    # Update the page with the new status and GitHub field
     update_data = {
         "properties": {
             "Status": {
@@ -58,9 +64,25 @@ def update_status(page_id, headers, new_status):
         }
     }
 
+    # Add GitHub field if provided
+    if github:
+        # Try different possible property names for GitHub
+        github_property_name = None
+        for prop_name, prop_data in database.get('properties', {}).items():
+            if prop_data.get('type') == 'url' and 'github' in prop_name.lower():
+                github_property_name = prop_name
+                break
+
+        if github_property_name:
+            update_data["properties"][github_property_name] = {
+                "url": github
+            }
+        else:
+            print("Warning: Could not find GitHub URL property in database")
+
     res = requests.patch(url, headers=headers, json=update_data)
     if res.status_code == 200:
-        print("Status updated to Done successfully!")
+        print("Status and GitHub field updated successfully!")
         return True
     else:
         print(f"Failed to update status: {res.status_code}")
@@ -68,11 +90,12 @@ def update_status(page_id, headers, new_status):
         return False
 
 if len(sys.argv) < 2:
-    print("Usage: python slack_trigger.py <search_title> new_status")
+    print("Usage: python slack_trigger.py <search_title> new_status [github_url]")
     sys.exit(1)
 
 SEARCH_TITLE = sys.argv[1]
 NEW_STATUS = sys.argv[2]
+GITHUB_URL = sys.argv[3] if len(sys.argv) > 3 else None
 
 headers = {
     "Authorization": f"Bearer {NOTION_API_KEY}",
@@ -138,7 +161,7 @@ if res.status_code == 200:
             # Update status if requested
             if NEW_STATUS:
                 print(f"\nUpdating status to {NEW_STATUS}...")
-                update_status(page.get('id'), headers, NEW_STATUS)
+                update_status(page.get('id'), headers, NEW_STATUS, GITHUB_URL)
 else:
     print(f"Failed to search database: {res.status_code}")
     print(f"Response: {res.text}")
