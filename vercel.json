@@ -1,6 +1,6 @@
 {
   "functions": {
-    "slack/slack_trigger.py": {
+    "api/notion_status_trigger.py": {
       "runtime": "python3.10"
     }
   }
