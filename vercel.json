@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "slack/slack_trigger.py": {
+      "runtime": "python3.10"
+    }
+  }
+}
